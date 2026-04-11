@@ -1,0 +1,29 @@
+steps:
+  # Dockerイメージをビルド
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/containers/aiwrite:$COMMIT_SHA', '.']
+
+  # イメージをArtifact Registryにプッシュ
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/containers/aiwrite:$COMMIT_SHA']
+
+  # Cloud Runにデプロイ
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'aiwrite'
+      - '--image'
+      - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/containers/aiwrite:$COMMIT_SHA'
+      - '--region'
+      - 'asia-northeast1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+images:
+  - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/containers/aiwrite:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
