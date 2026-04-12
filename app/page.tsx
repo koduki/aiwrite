@@ -115,7 +115,7 @@ const initialProject: AiwriteProject = {
   id: "project-1",
   activePhase: "structuring",
   persona: defaultPersona,
-  settings: defaultSettings,
+  settings: blankSettings,
   model: "openai/gpt-4o-mini",
   episodes: [initialEpisode],
   activeEpisodeId: initialEpisode.id,
