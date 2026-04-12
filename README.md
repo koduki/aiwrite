@@ -1,21 +1,14 @@
-# アイライト
+# アイライト - 私好みの小説を書いてもらうハイパーノベル
 
-アイライトは、ユーザー自身のOpenRouter APIキーを使ってAI作家と対話しながら小説を書くMVPです。スマホ中心のUIで、ChatGPTのような対話を読み進めながら、構造化、試し書き、微調整、本稿執筆をループできます。
+アイライトは、AIとI（私）の二人のアイが一緒に小説を書くためのツールです。ChatGPTのように対話を進めながら、作家AIに執筆を依頼して小説を書いてもらいます。
 
-## 実装範囲
+基本的には、まず初期コンセプトやキャラクターや世界観を一緒に決め、そこからサンプルを書いて設定や書き味のすり合わせをした上で、本稿を書いてもらいます。あなたが見たい「こんなシーンを見たい！」という願望をAIに伝えて、そのエピソードを書いてもらっちゃいましょう！
 
-- OpenRouter `/api/v1/chat/completions` へのNext.js API Route中継
-- 設定パネルでのOpenRouter APIキー、モデル名、AI作家ペルソナ編集
-- 複数作品と作品ごとの複数話管理
-- 創作ボードでの作品タイトル、コンセプト、キャラクター、世界観、プロット、参照素材、文体・本稿ルール編集
-- AIとの会話内容に応じたキャラクター設定、世界観、プロットの自動更新
-- テキストまたはURLからの設定インポート
-- 構造化、試し書き、微調整、本稿の4フェーズ
-- フェーズ別にAIの役割とプロンプトを切り替えるライターズルーム体験
-- 会話から現在採用している作品設定へ整理される創作ボード
-- 本稿フェーズの生成本文だけを積み上げる原稿プレビュー
-- Cloud Run向けDockerfile
-- Firestore導入時のセキュリティルール雛形
+## アーキテクチャ
+
+現在はAIはOpenRouterのみに対応しており、利用にはユーザー自身のAPIキーが必要です（BYOK）。APIキーや、作成した作品・話数・創作ボードなどの情報はすべてブラウザのLocalStorage（ローカルストレージ）に保存されます。
+
+サーバーサイドのデータベース機能を持たない完全なスタンドアローン設計となっているため、ユーザーの作品データやAPIキーがサーバーに送信・蓄積されることはありません。
 
 ## 詳細ドキュメント
 
@@ -24,6 +17,7 @@
 - [アーキテクチャ](./docs/architecture.md)
 - [データ構造](./docs/data-model.md)
 - [API仕様](./docs/api-spec.md)
+- [プロンプト設計](./docs/prompt-design.md)
 - [デプロイ](./docs/deployment.md)
 - [今後の拡張](./docs/roadmap.md)
 
@@ -38,41 +32,8 @@ http://localhost:3000 を開きます。
 
 ## 環境変数
 
-`.env.example` を参考に `.env.local` を作成します。Firebaseを使わないプロトタイプでは未設定でも動作します。
-
-```bash
-NEXT_PUBLIC_FIREBASE_CONFIG='{"apiKey":"","authDomain":"","projectId":"","appId":""}'
-```
-
-OpenRouter APIキーはBYOK前提のためサーバー環境変数には保存せず、ブラウザのLocalStorageに保持します。本番でDB保存へ切り替える場合は、Secret ManagerまたはCloud KMSで暗号化してからFirestoreへ保存してください。
-
-## データモデル
-
-```text
-users/{uid}
-  openrouter_key_encrypted
-  profile.name
-  profile.bio
-
-novels/{novelId}
-  author_id
-  title
-  settings.concept
-  settings.characters
-  settings.world_view
-  settings.plot
-  settings.reference_links
-  settings.writing_rules
-
-novels/{novelId}/episodes/{episodeId}
-  title
-  content
-  chat_log
-  created_at
-  updated_at
-```
-
-現状の画面はLocalStorage永続化です。Firestoreへ移す場合は、`lib/firebase.ts` の初期化を使い、`aiwrite:workspace:v2` に保存している作品と話数を `users`、`novels`、`episodes` へ分割して保存します。
+環境変数は基本的に不要です。
+OpenRouter APIキーはBYOK前提のためサーバー側には保存せず、ブラウザのLocalStorageにのみ保持します。
 
 ## Cloud Run
 
@@ -82,14 +43,5 @@ gcloud run deploy aiwrite \
   --image REGION-docker.pkg.dev/PROJECT_ID/aiwrite/aiwrite:latest \
   --region REGION \
   --platform managed \
-  --allow-unauthenticated \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_CONFIG='{"apiKey":"","authDomain":"","projectId":"","appId":""}'
+  --allow-unauthenticated
 ```
-
-## 次に足すべきもの
-
-- Firebase AuthenticationのGoogleログイン
-- Firestoreへの作品保存
-- OpenRouterモデル一覧の取得
-- URLインポート後のAI要約
-- 原稿差分を見ながらリテイクを採用するUI

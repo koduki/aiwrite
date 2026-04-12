@@ -2,7 +2,7 @@
 
 ## 概要
 
-MVPはNext.js単体で構成する。
+本アプリはNext.js単体で構成する。
 
 ```text
 Browser
@@ -86,13 +86,3 @@ API Routeはキーを受け取ってOpenRouterへ中継するだけである。
 テキストまたはURLから素材を取り込む。
 
 URLの場合はHTMLから読みやすいテキストを抽出し、創作ボードの参照リンク・素材メモへ追加する。
-
-## 将来のFirestore移行
-
-Firestoreへ移行する場合は、LocalStorageの `workspace` を以下へ分割する。
-
-- `users`
-- `novels`
-- `episodes`
-
-OpenRouter APIキーをDBに保存する場合は、Secret ManagerまたはCloud KMSで暗号化する。

@@ -90,39 +90,3 @@ type ChatMessage = {
   createdAt: string;
   phase?: NarrativePhase;
 };
-```
-
-## Firestore想定
-
-```text
-users/{uid}
-  openrouter_key_encrypted
-  profile.name
-  profile.bio
-
-novels/{novelId}
-  author_id
-  title
-  active_phase
-  active_episode_id
-  model
-  persona.name
-  persona.style
-  persona.point_of_view
-  persona.genres
-  settings.concept
-  settings.characters
-  settings.world_view
-  settings.plot
-  settings.reference_links
-  settings.writing_rules
-  created_at
-  updated_at
-
-novels/{novelId}/episodes/{episodeId}
-  title
-  content
-  chat_log
-  created_at
-  updated_at
-```

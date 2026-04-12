@@ -14,94 +14,11 @@ import type {
 const STORAGE_KEY = "aiwrite:workspace:v2";
 const API_KEY_STORAGE_KEY = "aiwrite:openrouter-key";
 
-const phases: Array<{
-  id: NarrativePhase;
-  label: string;
-  role: string;
-  intent: string;
-  placeholder: string;
-  starters: string[];
-}> = [
-  {
-    id: "structuring",
-    label: "構造化",
-    role: "編集者兼リサーチャー",
-    intent: "テーマをプロット、世界観、キャラ配置へ変換する",
-    placeholder: "神話の名前の奪い合いをテーマに、勢力図、主人公、対立構造、第1章の方向性を作って。",
-    starters: [
-      "まず作品コンセプトと勢力図を作って",
-      "主人公、敵対者、裏切り者を配置して",
-      "第1章までのプロット候補を3案出して",
-    ],
-  },
-  {
-    id: "sampling",
-    label: "試し書き",
-    role: "サンプル脚本家",
-    intent: "短い本文を複数出して読み味を確かめる",
-    placeholder: "この設定で、メデューサ初登場のサンプルを3パターン書いて。会話多め、軽いけど奥は重く。",
-    starters: [
-      "冒頭サンプルを3パターン書いて",
-      "主要キャラの会話サンプルを出して",
-      "ラノベ寄りと硬めの文体を比較して",
-    ],
-  },
-  {
-    id: "refining",
-    label: "微調整",
-    role: "共著者兼編集者",
-    intent: "サンプルの違和感を設定仕様へ反映する",
-    placeholder: "サンプルを読むとメデューサはもっと明るくていい。アテナは二重スパイ。ヘカテーは松明で殴る方向で固めて。",
-    starters: [
-      "この違和感をキャラ造形に反映して",
-      "採用する文体ルールを固めて",
-      "本稿前のプロット仕様にまとめて",
-    ],
-  },
-  {
-    id: "drafting",
-    label: "本稿",
-    role: "ゴーストライター",
-    intent: "固めた仕様から章単位で本文を書く",
-    placeholder: "固めた仕様に従って、第1話を本稿として書いて。ラノベ調で、でも本質は重く。",
-    starters: [
-      "第1話を本稿として書いて",
-      "会話多めで、奥に重さが残る本文にして",
-      "直前の本文を踏まえて続きを書いて",
-    ],
-  },
-];
-
-const defaultPersona: Persona = {
-  name: "藍ライト",
-  style: "軽快に読めるが、設定の奥行きがにじむ文体。会話はテンポよく、地の文は短く刺す。",
-  pointOfView: "三人称一元視点",
-  genres: "神話再解釈、ライトノベル、群像劇、現代ファンタジー",
-};
-
-const defaultSettings: NovelSettings = {
-  title: "名前を奪う神々",
-  concept:
-    "神話は勝者に書き換えられる。名前を奪われた者たちが、自分の物語を取り戻すライトノベル群像劇。",
-  worldView:
-    "古い神話は勝者によって書き換えられる。神々は信仰だけでなく、名前、役割、物語そのものを奪い合っている。",
-  plot:
-    "メデューサが自分に押し付けられた怪物の物語へ違和感を抱き、アテナやヘカテーと衝突しながら名前の奪還戦へ巻き込まれていく。",
-  characters:
-    "メデューサ: 前向きで明るいヒロイン。呪いを不幸ではなく武器に変えようとする。\nアテナ: 表向きは秩序の守護者だが、裏では二重スパイとして動く。\nヘカテー: 松明で殴るタイプの魔女神。理屈より突破力。",
-  referenceLinks: "",
-  writingRules: "ラノベ調。会話は軽快に、設定の本質は重く。説明は短く、キャラの行動で見せる。",
-};
-
-const blankSettings: NovelSettings = {
-  title: "新しい作品",
-  concept: "",
-  worldView: "",
-  plot: "",
-  characters: "",
-  referenceLinks: "",
-  writingRules: "",
-};
+import {
+  BLANK_SETTINGS as blankSettings,
+  DEFAULT_PERSONA as defaultPersona,
+  PHASE_METADATA as phases,
+} from "@/lib/prompts";
 
 const initialEpisode: AiwriteEpisode = {
   id: "episode-1",
@@ -799,10 +716,26 @@ export default function Home() {
               </label>
               <label>
                 AI作家名
-                <input value={activeProject.persona.name} onChange={(event) => updatePersona("name", event.target.value)} />
+                <input value={activeProject.persona.name || ""} onChange={(event) => updatePersona("name", event.target.value)} />
               </label>
               <label>
-                AI作家ペルソナ・文体
+                AIのキャラクター性・トーク
+                <textarea
+                  value={activeProject.persona.character || ""}
+                  onChange={(event) => updatePersona("character", event.target.value)}
+                  placeholder="知的で冷静、熱血、皮肉屋など"
+                />
+              </label>
+              <label>
+                こちらの呼び方
+                <input
+                  value={activeProject.persona.userCall || ""}
+                  onChange={(event) => updatePersona("userCall", event.target.value)}
+                  placeholder="プロデューサー、監督、あなたなど"
+                />
+              </label>
+              <label>
+                執筆する文体・ペルソナ
                 <textarea
                   value={activeProject.persona.style}
                   onChange={(event) => updatePersona("style", event.target.value)}

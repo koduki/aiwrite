@@ -2,8 +2,6 @@
 
 ## 優先度高
 
-- Firestore保存
-- Firebase Authentication
 - OpenRouterモデル一覧取得
 - URLインポート後のAI要約
 - 原稿差分を見ながらリテイクを採用するUI

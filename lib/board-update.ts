@@ -1,4 +1,5 @@
 import type { NarrativePhase, NovelSettings, Persona } from "./types";
+import { BOARD_UPDATE_PROMPTS } from "./prompts";
 
 export type BoardUpdateRequest = {
   apiKey: string;
@@ -24,17 +25,7 @@ export function buildBoardUpdateMessages(input: BoardUpdateRequest) {
   return [
     {
       role: "system",
-      content: [
-        "あなたは小説制作ボードを更新する編集アシスタントです。",
-        "ユーザーとAIの最新の会話から、作品の現在設定として採用すべき内容を抽出し、既存のボードへ統合してください。",
-        "特にコンセプト、キャラクター設定、世界観、プロット、勢力図、文体判断に影響する内容を反映してください。",
-        "会話内の単なる候補、却下された案、本文だけの一時表現は、採用が明確でない限り固定設定にしないでください。",
-        "既存設定を破壊せず、矛盾する場合は最新のユーザー指示を優先して自然に更新してください。",
-        "出力はJSONのみ。Markdownや説明文は禁止です。",
-        "",
-        "JSON形式:",
-        '{"title":"...","concept":"...","characters":"...","worldView":"...","plot":"...","referenceLinks":"...","writingRules":"..."}',
-      ].join("\n"),
+      content: BOARD_UPDATE_PROMPTS.SYSTEM,
     },
     {
       role: "user",
@@ -71,7 +62,7 @@ export function buildBoardUpdateMessages(input: BoardUpdateRequest) {
         "最新のAI応答:",
         input.assistantResponse,
         "",
-        "上記を反映した最新ボードをJSONだけで返してください。",
+        BOARD_UPDATE_PROMPTS.USER_FOOTER,
       ].join("\n"),
     },
   ];

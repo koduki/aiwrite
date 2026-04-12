@@ -12,6 +12,8 @@ export type NarrativePhase = "structuring" | "sampling" | "refining" | "drafting
 
 export type Persona = {
   name: string;
+  character: string;
+  userCall: string;
   style: string;
   pointOfView: string;
   genres: string;

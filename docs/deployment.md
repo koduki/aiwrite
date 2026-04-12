@@ -2,7 +2,7 @@
 
 ## 前提
 
-MVPはCloud RunへNext.js standalone出力をDockerコンテナとしてデプロイする想定。
+本アプリはCloud RunへNext.js standalone出力をDockerコンテナとしてデプロイする想定。
 
 ## Docker
 
@@ -37,17 +37,9 @@ gcloud run deploy aiwrite \
   --image REGION-docker.pkg.dev/PROJECT_ID/aiwrite/aiwrite:latest \
   --region REGION \
   --platform managed \
-  --allow-unauthenticated \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_CONFIG='{"apiKey":"","authDomain":"","projectId":"","appId":""}'
+  --allow-unauthenticated
 ```
 
 ## 環境変数
 
-```bash
-NEXT_PUBLIC_FIREBASE_CONFIG='{"apiKey":"","authDomain":"","projectId":"","appId":""}'
-```
-
-Firebaseを使わないMVPでは未設定でも動作する。
-
 OpenRouter APIキーはBYOKのためサーバー環境変数には保存しない。
-
