@@ -24,6 +24,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "AI作家への依頼を入力してください。" }, { status: 400 });
   }
 
+  // Sanitize user input to prevent prompt injection
+  function sanitizePrompt(input: string): string {
+    if (!input) return '';
+    return input
+      .replace(/<script\\b[^<]*(?:(?!<\\/script>)<[^<]*)*<\\/script>/gi, '[SCRIPT REMOVED]')
+      .replace(/eval\\s*\\(/gi, '[EVAL BLOCKED]')
+      .replace(/javascript:/gi, '[JS BLOCKED]')
+      .replace(/[\\x00-\\x1F\\x7F]/g, '')  // Control chars
+      .trim();
+  }
+
+  const sanitizedInstruction = sanitizePrompt(payload.userInstruction);
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {

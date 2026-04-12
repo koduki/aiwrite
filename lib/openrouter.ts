@@ -57,7 +57,7 @@ export function buildOpenRouterMessages(input: OpenRouterRequest) {
         "現在の原稿:",
         input.currentManuscript || "まだ本文はありません。",
         "",
-        "ユーザー依頼:",
+        "ユーザー依頼 (sanitized):",
         input.userInstruction,
       ].join("\n"),
     },
