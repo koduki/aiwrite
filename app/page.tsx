@@ -317,37 +317,52 @@ export default function Home() {
   }
 
   function deleteProject() {
-    if (workspace.projects.length <= 1) {
-      setNotice("作品は最低1件必要です。");
-      return;
-    }
-
     if (!confirm(`「${activeProject.settings.title || "無題の小説"}」を削除しますか？`)) {
       return;
     }
 
     setWorkspace((current) => {
       const projects = current.projects.filter((project) => project.id !== current.activeProjectId);
-      return {
-        projects,
-        activeProjectId: projects[0].id,
-      };
+      if (projects.length === 0) {
+        const now = new Date().toISOString();
+        const newEpisodeId = crypto.randomUUID();
+        const newProject: AiwriteProject = {
+          ...initialProject,
+          id: crypto.randomUUID(),
+          activeEpisodeId: newEpisodeId,
+          settings: { ...blankSettings, title: "新しい作品" },
+          episodes: [{ ...initialEpisode, id: newEpisodeId, updatedAt: now }],
+          updatedAt: now,
+        };
+        return { projects: [newProject], activeProjectId: newProject.id };
+      }
+      return { projects, activeProjectId: projects[0].id };
     });
     setNotice("作品を削除しました。");
   }
 
   function deleteEpisode() {
-    if (activeProject.episodes.length <= 1) {
-      setNotice("話数は最低1件必要です。");
-      return;
-    }
-
     if (!confirm(`「${activeEpisode.title}」を削除しますか？`)) {
       return;
     }
 
     updateActiveProject((project) => {
       const episodes = project.episodes.filter((episode) => episode.id !== project.activeEpisodeId);
+      if (episodes.length === 0) {
+        const newEpisode: AiwriteEpisode = {
+          id: crypto.randomUUID(),
+          title: "第1話",
+          manuscript: "",
+          chatLog: [],
+          updatedAt: new Date().toISOString(),
+        };
+        return {
+          ...project,
+          episodes: [newEpisode],
+          activeEpisodeId: newEpisode.id,
+          updatedAt: new Date().toISOString(),
+        };
+      }
       return {
         ...project,
         episodes,
