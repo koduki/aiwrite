@@ -310,11 +310,66 @@ export default function Home() {
     localStorage.setItem(API_KEY_STORAGE_KEY, apiKey.trim());
     setIsLoading(true);
 
-    const userMessage = createMessage("user", instruction.trim(), phase);
-    const nextLog = [...activeEpisode.chatLog, userMessage];
-    updateActiveEpisode((current) => ({ ...current, chatLog: nextLog, updatedAt: new Date().toISOString() }));
-
     try {
+      let targetEpisodeId = activeEpisode.id;
+      let targetChatLog = activeEpisode.chatLog;
+      let targetManuscript = activeEpisode.manuscript;
+
+      if (phase === "drafting") {
+        // 「続き」「次」などのニュアンスがあるか判定
+        const intentResponse = await fetch("/api/intent-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            apiKey: apiKey.trim(),
+            model: activeProject.model,
+            userInstruction: instruction.trim(),
+          }),
+        });
+
+        if (intentResponse.ok) {
+          const intentData = await intentResponse.json();
+          if (intentData.isNextEpisode) {
+            // 次の話を作成
+            targetEpisodeId = crypto.randomUUID();
+            const newEpisodeTitle = `第${activeProject.episodes.length + 1}話`;
+            targetChatLog = [];
+            targetManuscript = "";
+
+            const newEpisode: AiwriteEpisode = {
+              id: targetEpisodeId,
+              title: newEpisodeTitle,
+              manuscript: targetManuscript,
+              chatLog: targetChatLog,
+              updatedAt: new Date().toISOString(),
+            };
+
+            updateActiveProject((project) => ({
+              ...project,
+              episodes: [...project.episodes, newEpisode],
+              activeEpisodeId: targetEpisodeId,
+              updatedAt: new Date().toISOString(),
+            }));
+
+            // UIへの反映を待つため少し待機
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+        }
+      }
+
+      const userMessage = createMessage("user", instruction.trim(), phase);
+      const nextLog = [...targetChatLog, userMessage];
+
+      // 送信メッセージを対象のエピソードに反映
+      updateActiveProject((project) => ({
+        ...project,
+        episodes: project.episodes.map((episode) =>
+          episode.id === targetEpisodeId
+            ? { ...episode, chatLog: nextLog, updatedAt: new Date().toISOString() }
+            : episode,
+        ),
+      }));
+
       const response = await fetch("/api/openrouter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -325,7 +380,7 @@ export default function Home() {
           persona: activeProject.persona,
           settings: activeProject.settings,
           messages: nextLog,
-          currentManuscript: activeEpisode.manuscript,
+          currentManuscript: targetManuscript,
           userInstruction: instruction.trim(),
           mode: requestMode,
         }),
@@ -367,13 +422,13 @@ export default function Home() {
         ...current,
         settings: mergeBoardSettings(current.settings, boardSettingsPatch),
         episodes: current.episodes.map((episode) =>
-          episode.id === current.activeEpisodeId
+          episode.id === targetEpisodeId
             ? {
                 ...episode,
                 chatLog: [...nextLog, assistantMessage],
                 manuscript:
                   phase === "drafting"
-                    ? [episode.manuscript, extractScene(generatedContent)].filter(Boolean).join("\n\n")
+                    ? [targetManuscript, extractScene(generatedContent)].filter(Boolean).join("\n\n")
                     : episode.manuscript,
                 updatedAt: new Date().toISOString(),
               }
