@@ -53,7 +53,8 @@ export async function POST(request: Request) {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content?.trim();
     if (content) {
-      const parsed = JSON.parse(content);
+      const cleanContent = content.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+      const parsed = JSON.parse(cleanContent);
       return NextResponse.json({ isNextEpisode: !!parsed.isNextEpisode });
     }
   } catch {
