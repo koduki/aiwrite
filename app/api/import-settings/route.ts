@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isBlockedHost } from "@/lib/url-guard";
 
 function extractReadableText(html: string) {
   return html
@@ -15,7 +16,14 @@ function extractReadableText(html: string) {
 }
 
 export async function POST(request: Request) {
-  const { url, text } = (await request.json()) as { url?: string; text?: string };
+  let body: { url?: string; text?: string };
+  try {
+    body = (await request.json()) as { url?: string; text?: string };
+  } catch {
+    return NextResponse.json({ error: "JSONを読み取れませんでした。" }, { status: 400 });
+  }
+
+  const { url, text } = body;
 
   if (text?.trim()) {
     return NextResponse.json({ importedText: text.trim().slice(0, 6000) });
@@ -36,19 +44,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "httpまたはhttpsのURLのみ読み込めます。" }, { status: 400 });
   }
 
-  const response = await fetch(parsed.toString(), {
-    headers: {
-      "User-Agent": "aiwrite-settings-importer/0.1",
-    },
-  });
+  if (isBlockedHost(parsed.hostname)) {
+    return NextResponse.json({ error: "内部ネットワークへのアクセスは許可されていません。" }, { status: 403 });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(parsed.toString(), {
+      headers: {
+        "User-Agent": "aiwrite-settings-importer/0.1",
+      },
+      signal: AbortSignal.timeout(10_000),
+      redirect: "error",
+    });
+  } catch {
+    return NextResponse.json({ error: "URLを読み込めませんでした。" }, { status: 502 });
+  }
 
   if (!response.ok) {
     return NextResponse.json({ error: `URLを読み込めませんでした: ${response.status}` }, { status: 502 });
   }
 
   const contentType = response.headers.get("content-type") || "";
-  const body = await response.text();
-  const importedText = contentType.includes("text/html") ? extractReadableText(body) : body.slice(0, 6000);
+  const responseBody = await response.text();
+  const importedText = contentType.includes("text/html") ? extractReadableText(responseBody) : responseBody.slice(0, 6000);
 
   return NextResponse.json({ importedText });
 }
