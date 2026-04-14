@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+const MAX_TEXT_LENGTH = 6000;
+const MAX_RESPONSE_BYTES = 1_000_000; // 1 MB
+
 function extractReadableText(html: string) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -11,14 +14,14 @@ function extractReadableText(html: string) {
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 6000);
+    .slice(0, MAX_TEXT_LENGTH);
 }
 
 export async function POST(request: Request) {
   const { url, text } = (await request.json()) as { url?: string; text?: string };
 
   if (text?.trim()) {
-    return NextResponse.json({ importedText: text.trim().slice(0, 6000) });
+    return NextResponse.json({ importedText: text.trim().slice(0, MAX_TEXT_LENGTH) });
   }
 
   if (!url?.trim()) {
@@ -46,9 +49,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `URLを読み込めませんでした: ${response.status}` }, { status: 502 });
   }
 
-  const contentType = response.headers.get("content-type") || "";
+  const contentLength = Number(response.headers.get("content-length") || "0");
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    return NextResponse.json({ error: "レスポンスが大きすぎます。" }, { status: 502 });
+  }
+
   const body = await response.text();
-  const importedText = contentType.includes("text/html") ? extractReadableText(body) : body.slice(0, 6000);
+  if (body.length > MAX_RESPONSE_BYTES) {
+    return NextResponse.json({ error: "レスポンスが大きすぎます。" }, { status: 502 });
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const importedText = contentType.includes("text/html") ? extractReadableText(body) : body.slice(0, MAX_TEXT_LENGTH);
 
   return NextResponse.json({ importedText });
 }
