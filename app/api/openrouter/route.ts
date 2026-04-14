@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildOpenRouterMessages, type OpenRouterRequest } from "@/lib/openrouter";
+import { validateOpenRouterPayload } from "@/lib/validation";
 
 type OpenRouterChoice = {
   message?: {
@@ -16,12 +17,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSONを読み取れませんでした。" }, { status: 400 });
   }
 
-  if (!payload.apiKey) {
-    return NextResponse.json({ error: "OpenRouter APIキーを入力してください。" }, { status: 400 });
-  }
-
-  if (!payload.userInstruction?.trim()) {
-    return NextResponse.json({ error: "AI作家への依頼を入力してください。" }, { status: 400 });
+  const validation = validateOpenRouterPayload(payload as unknown as Record<string, unknown>);
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
