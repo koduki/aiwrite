@@ -45,3 +45,21 @@ gcloud run deploy aiwrite \
   --platform managed \
   --allow-unauthenticated
 ```
+
+## Sinatra + Alpine.js + RubyLLM 版（`ruby_app/`）
+
+Next.js 版と並行して、Ruby 4 系向けに Sinatra 実装を追加しています。
+
+```bash
+cd ruby_app
+bundle install
+bundle exec ruby app.rb
+```
+
+http://localhost:4567 を開きます。
+
+主要API:
+- `POST /api/openrouter`
+- `POST /api/intent-check`
+- `POST /api/board-update`
+- `POST /api/import-settings`
