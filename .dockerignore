@@ -3,3 +3,5 @@
 vendor/bundle
 .env
 .env.local
+.devcontainer
+docs
