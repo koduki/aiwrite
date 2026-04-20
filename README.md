@@ -6,7 +6,8 @@
 
 ## 技術スタック
 
-- **バックエンド**: Ruby 4.0 + Sinatra 4.2 + Puma
+- **バックエンド**: Ruby 3.4 + Sinatra 4.2 + Puma
+- **ライブラリ**: RubyLLM (LLM 抽象化レイヤー)
 - **フロントエンド**: Vanilla HTML + Alpine.js 3.x
 - **AI API**: OpenRouter（BYOK: Bring Your Own Key）
 

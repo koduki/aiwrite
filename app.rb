@@ -7,13 +7,12 @@ require "uri"
 
 require_relative "lib/openrouter"
 require_relative "lib/board_update"
+require_relative "lib/llm_client"
 
 module Aiwrite
   class App < Sinatra::Base
     set :public_folder, File.join(__dir__, "public")
     set :static, true
-
-    OPENROUTER_URL = URI("https://openrouter.ai/api/v1/chat/completions").freeze
 
     # ─── ルートページ ───
     get "/" do
@@ -27,20 +26,19 @@ module Aiwrite
       return json_error("OpenRouter APIキーを入力してください。", 400) if payload["apiKey"].to_s.empty?
       return json_error("AI作家への依頼を入力してください。", 400) if payload["userInstruction"].to_s.strip.empty?
 
-      messages = OpenRouter.build_messages(payload)
-      result = call_openrouter(
+      llm_data = OpenRouter.prepare_payload(payload)
+      result = LlmClient.chat(
         api_key: payload["apiKey"],
         model: payload["model"] || "openai/gpt-4o-mini",
-        messages: messages,
+        system_prompt: llm_data[:system_prompt],
+        messages: llm_data[:history],
+        user_message: llm_data[:user_message],
         temperature: 0.85
       )
 
-      return json_error("OpenRouterエラー: #{result[:status]}", result[:status], result[:detail]) unless result[:ok]
+      return json_error(result[:detail], result[:status]) unless result[:ok]
 
-      content = result.dig(:data, "choices", 0, "message", "content")&.strip
-      return json_error("AIの応答が空でした。", 502) if content.to_s.empty?
-
-      json_response(content: content)
+      json_response(content: result[:content])
     end
 
     # ─── ボード自動更新 ───
@@ -49,28 +47,27 @@ module Aiwrite
       return json_error("JSONを読み取れませんでした。", 400) unless payload
       return json_error("OpenRouter APIキーを入力してください。", 400) if payload["apiKey"].to_s.empty?
 
-      messages = BoardUpdate.build_messages(payload)
-      result = call_openrouter(
+      llm_data = BoardUpdate.prepare_payload(payload)
+      result = LlmClient.chat(
         api_key: payload["apiKey"],
         model: payload["model"] || "openai/gpt-4o-mini",
-        messages: messages,
+        system_prompt: llm_data[:system_prompt],
+        messages: llm_data[:history],
+        user_message: llm_data[:user_message],
         temperature: 0.2,
-        extra: { response_format: { type: "json_object" } }
+        params: { response_format: { type: "json_object" } }
       )
 
-      return json_error("OpenRouterエラー: #{result[:status]}", result[:status], result[:detail]) unless result[:ok]
-
-      raw_content = result.dig(:data, "choices", 0, "message", "content")
-      return json_error("ボード更新の応答が空でした。", 502) if raw_content.to_s.empty?
+      return json_error(result[:detail], result[:status]) unless result[:ok]
 
       begin
-        settings = BoardUpdate.parse(raw_content)
+        settings = BoardUpdate.parse(result[:content])
         json_response(settings: settings)
       rescue JSON::ParserError
         json_error("ボード更新JSONを解析できませんでした。", 502)
       end
     end
-
+    
     # ─── 設定インポート ───
     post "/api/import-settings" do
       payload = parse_json_body
@@ -138,34 +135,6 @@ module Aiwrite
       body = { error: message }
       body[:detail] = detail if detail
       JSON.generate(body)
-    end
-
-    def call_openrouter(api_key:, model:, messages:, temperature:, extra: {})
-      http = Net::HTTP.new(OPENROUTER_URL.host, OPENROUTER_URL.port)
-      http.use_ssl = true
-      http.open_timeout = 15
-      http.read_timeout = 120
-
-      req = Net::HTTP::Post.new(OPENROUTER_URL)
-      req["Authorization"] = "Bearer #{api_key}"
-      req["Content-Type"] = "application/json"
-      req["HTTP-Referer"] = "https://aiwrite.local"
-      req["X-Title"] = "aiwrite"
-      req.body = JSON.generate({
-        model: model,
-        messages: messages.map { |m| { role: m[:role] || m["role"], content: m[:content] || m["content"] } },
-        temperature: temperature
-      }.merge(extra))
-
-      response = http.request(req)
-
-      if response.is_a?(Net::HTTPSuccess)
-        { ok: true, data: JSON.parse(response.body), status: response.code.to_i }
-      else
-        { ok: false, status: response.code.to_i, detail: response.body[0, 1200] }
-      end
-    rescue StandardError => e
-      { ok: false, status: 500, detail: e.message }
     end
 
     def extract_readable_text(html)

@@ -12,6 +12,8 @@ Browser (Alpine.js)
   | - OpenRouter API key
   |
 Sinatra (Ruby)
+  | 
+  | -- LlmClient (RubyLLM) -- Extension point for MCP/Agents
   |
   | API Routes
   | - /api/openrouter

@@ -31,19 +31,15 @@ module Aiwrite
       ].join("\n")
     end
 
-    # OpenRouter API に送るメッセージ配列を組み立てる
-    def build_messages(input)
-      messages = input["messages"] || []
-      recent = messages.last(10).map { |m| { role: m["role"], content: m["content"] } }
-
-      active_phase = Prompts::PHASE_METADATA.find { |p| p[:id] == input["phase"] }
-
+    # LLM 呼び出し用のペイロードを準備する
+    def prepare_payload(input)
       system_content = build_system_prompt(
         input["persona"] || {},
         input["settings"] || {},
         input["phase"]
       )
 
+      active_phase = Prompts::PHASE_METADATA.find { |p| p[:id] == input["phase"] }
       user_content = [
         active_phase&.dig(:instruction) || "",
         Prompts::INSTRUCTIONS_BY_MODE[input["mode"]] || "",
@@ -55,11 +51,14 @@ module Aiwrite
         input["userInstruction"]
       ].join("\n")
 
-      [
-        { role: "system", content: system_content },
-        *recent,
-        { role: "user", content: user_content }
-      ]
+      messages = input["messages"] || []
+      history = messages.last(10).map { |m| { role: m["role"], content: m["content"] } }
+
+      {
+        system_prompt: system_content,
+        history: history,
+        user_message: user_content
+      }
     end
   end
 end
