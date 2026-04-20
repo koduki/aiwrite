@@ -1,6 +1,6 @@
-.next
-node_modules
+.bundle/
+vendor/bundle/
+*.gem
 .env
 .env.local
-npm-debug.log*
-*.tsbuildinfo
+node_modules

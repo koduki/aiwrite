@@ -4,26 +4,26 @@
 
 ### `aiwrite:workspace:v2`
 
-```ts
-type AiwriteWorkspace = {
-  projects: AiwriteProject[];
-  activeProjectId: string;
-};
+```json
+{
+  "projects": [ /* AiwriteProject array */ ],
+  "activeProjectId": "string"
+}
 ```
 
 ### Project
 
-```ts
-type AiwriteProject = {
-  id: string;
-  activePhase: "structuring" | "sampling" | "refining" | "drafting";
-  persona: Persona;
-  settings: NovelSettings;
-  model: string;
-  episodes: AiwriteEpisode[];
-  activeEpisodeId: string;
-  updatedAt: string;
-};
+```json
+{
+  "id": "string",
+  "activePhase": "structuring | sampling | refining | drafting",
+  "persona": { /* Persona object */ },
+  "settings": { /* NovelSettings object */ },
+  "model": "string",
+  "episodes": [ /* AiwriteEpisode array */ ],
+  "activeEpisodeId": "string",
+  "updatedAt": "string (ISO8601)"
+}
 ```
 
 作品単位で持つもの:
@@ -37,14 +37,14 @@ type AiwriteProject = {
 
 ### Episode
 
-```ts
-type AiwriteEpisode = {
-  id: string;
-  title: string;
-  manuscript: string;
-  chatLog: ChatMessage[];
-  updatedAt: string;
-};
+```json
+{
+  "id": "string",
+  "title": "string",
+  "manuscript": "string",
+  "chatLog": [ /* ChatMessage array */ ],
+  "updatedAt": "string (ISO8601)"
+}
 ```
 
 話数単位で持つもの:
@@ -55,38 +55,41 @@ type AiwriteEpisode = {
 
 ### NovelSettings
 
-```ts
-type NovelSettings = {
-  title: string;
-  concept: string;
-  worldView: string;
-  plot: string;
-  characters: string;
-  referenceLinks: string;
-  writingRules: string;
-};
+```json
+{
+  "title": "string",
+  "concept": "string",
+  "worldView": "string",
+  "plot": "string",
+  "characters": "string",
+  "referenceLinks": "string",
+  "writingRules": "string"
+}
 ```
 
 これは創作ボードの実体である。
 
 ### Persona
 
-```ts
-type Persona = {
-  name: string;
-  style: string;
-  pointOfView: string;
-  genres: string;
-};
+```json
+{
+  "name": "string",
+  "character": "string",
+  "userCall": "string",
+  "style": "string",
+  "pointOfView": "string",
+  "genres": "string"
+}
 ```
 
 ### ChatMessage
 
-```ts
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  createdAt: string;
-  phase?: NarrativePhase;
-};
+```json
+{
+  "id": "string",
+  "role": "user | assistant",
+  "content": "string",
+  "createdAt": "string (ISO8601)",
+  "phase": "NarrativePhase (optional)"
+}
+```

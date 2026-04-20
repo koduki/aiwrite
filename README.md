@@ -4,6 +4,13 @@
 
 基本的には、まず初期コンセプトやキャラクターや世界観を一緒に決め、そこからサンプルを書いて設定や書き味のすり合わせをした上で、本稿を書いてもらいます。あなたが見たい「こんなシーンを見たい！」という願望をAIに伝えて、そのエピソードを書いてもらっちゃいましょう！
 
+## 技術スタック
+
+- **バックエンド**: Ruby 3.4 + Sinatra 4.2 + Puma
+- **ライブラリ**: RubyLLM (LLM 抽象化レイヤー)
+- **フロントエンド**: Vanilla HTML + Alpine.js 3.x
+- **AI API**: OpenRouter（BYOK: Bring Your Own Key）
+
 ## アーキテクチャ
 
 現在はAIはOpenRouterのみに対応しており、利用にはユーザー自身のAPIキーが必要です（BYOK）。APIキーや、作成した作品・話数・創作ボードなどの情報はすべてブラウザのLocalStorage（ローカルストレージ）に保存されます。
@@ -24,11 +31,11 @@
 ## 起動
 
 ```bash
-npm install
-npm run dev
+bundle install
+bundle exec puma
 ```
 
-http://localhost:3000 を開きます。
+http://localhost:9292 を開きます。
 
 ## 環境変数
 

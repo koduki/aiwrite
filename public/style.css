@@ -12,6 +12,8 @@
   --shadow: 0 18px 46px rgba(0, 0, 0, 0.14);
 }
 
+[x-cloak] { display: none !important; }
+
 * {
   box-sizing: border-box;
 }
@@ -175,7 +177,7 @@ a {
   gap: 5px;
 }
 
-.phase-strip button span {
+.phase-strip button .phase-num {
   width: 19px;
   height: 19px;
   display: grid;
@@ -191,7 +193,7 @@ a {
   color: #fff;
 }
 
-.phase-strip button.is-active span {
+.phase-strip button.is-active .phase-num {
   background: #fff;
   color: var(--accent-strong);
 }
@@ -300,7 +302,7 @@ h1 {
   margin: 0;
 }
 
-.speaker-row span {
+.speaker-row span.phase-tag {
   flex: 0 0 auto;
   border: 1px solid rgba(0, 134, 111, 0.28);
   border-radius: 8px;
@@ -350,9 +352,6 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
-}
-
-.starter-grid {
   overflow-x: auto;
 }
 

@@ -2,16 +2,18 @@
 
 ## 概要
 
-本アプリはNext.js単体で構成する。
+本アプリは Ruby/Sinatra (Backend) と Alpine.js (Frontend) で構成する。
 
 ```text
-Browser
+Browser (Alpine.js)
   |
   | LocalStorage
   | - workspace
   | - OpenRouter API key
   |
-Next.js App Router
+Sinatra (Ruby)
+  | 
+  | -- LlmClient (RubyLLM) -- Extension point for MCP/Agents
   |
   | API Routes
   | - /api/openrouter
@@ -23,13 +25,12 @@ OpenRouter
 
 ## 技術スタック
 
-- Next.js App Router
-- React
-- TypeScript
-- OpenRouter Chat Completions API
-- LocalStorage
-- Docker
-- Cloud Run想定
+- **Backend**: Ruby 3.4+ / Sinatra 4.2+ (Puma)
+- **Frontend**: Alpine.js 3.x / Vanilla HTML / CSS
+- **AI API**: OpenRouter Chat Completions API
+- **永続化**: ブラウザ LocalStorage
+- **コンテナ**: Docker (Alpine Ruby)
+- **プラットフォーム**: Cloud Run (想定)
 
 ## 永続化
 
