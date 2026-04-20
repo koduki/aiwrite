@@ -17,6 +17,9 @@ module Aiwrite
     set :public_folder, File.join(__dir__, "public")
     set :static, true
 
+    # HostAuthorization の設定 (GitHub Codespaces 等への対応)
+    set :host_authorization, { permitted_hosts: [".github.dev", "localhost", "127.0.0.1"] }
+
     # ─── ルートページ ───
     get "/" do
       send_file File.join(settings.public_folder, "index.html")
