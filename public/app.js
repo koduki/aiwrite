@@ -264,19 +264,62 @@ function aiwriteApp() {
       this.save();
       this.isLoading = true;
 
-      const userMsg = { id: createId(), role: 'user', content: this.instruction.trim(), phase: phaseId, createdAt: new Date().toISOString() };
-      this.ep.chatLog.push(userMsg);
-      this.ep.updatedAt = new Date().toISOString();
-
-      const snapshot = this.ep.chatLog.map(m => ({ ...m }));
-
       try {
+        let targetEpisode = this.ep;
+        let targetLog = [...targetEpisode.chatLog];
+        let targetManuscript = targetEpisode.manuscript;
+
+        if (phaseId === 'drafting') {
+          // 「続き」「次」などのニュアンスがあるか判定
+          try {
+            const intentRes = await fetch('/api/intent-check', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                apiKey: this.apiKey.trim(),
+                model: this.proj.model,
+                userInstruction: this.instruction.trim(),
+              }),
+            });
+
+            if (intentRes.ok) {
+              const intentData = await intentRes.json();
+              if (intentData.isNextEpisode) {
+                const newEp = createInitialEpisode();
+                newEp.title = `第${this.proj.episodes.length + 1}話`;
+                this.proj.episodes.push(newEp);
+                this.proj.activeEpisodeId = newEp.id;
+                
+                targetEpisode = newEp;
+                targetLog = [];
+                targetManuscript = '';
+                
+                // UI反映のために少し待つ (Alpineの場合は不要かもしれないが同期をとる)
+                await new Promise(r => setTimeout(r, 0));
+              }
+            }
+          } catch (e) {
+            console.error('Intent check failed', e);
+          }
+        }
+
+        const userMsg = { 
+          id: createId(), 
+          role: 'user', 
+          content: this.instruction.trim(), 
+          phase: phaseId, 
+          createdAt: new Date().toISOString() 
+        };
+        targetLog.push(userMsg);
+        targetEpisode.chatLog.push(userMsg);
+        targetEpisode.updatedAt = new Date().toISOString();
+
         const res = await fetch('/api/openrouter', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             apiKey: this.apiKey.trim(), model: this.proj.model, phase: phaseId,
             persona: this.proj.persona, settings: this.proj.settings,
-            messages: snapshot, currentManuscript: this.ep.manuscript,
+            messages: targetLog, currentManuscript: targetManuscript,
             userInstruction: this.instruction.trim(), mode,
           }),
         });
@@ -301,16 +344,16 @@ function aiwriteApp() {
           if (bRes.ok) { boardPatch = (await bRes.json()).settings; }
         } catch { /* ignore */ }
 
-        this.ep.chatLog.push(asstMsg);
+        targetEpisode.chatLog.push(asstMsg);
 
         if (phaseId === 'drafting') {
           const extracted = extractScene(generated);
-          this.ep.manuscript = [this.ep.manuscript, extracted].filter(Boolean).join('\n\n');
+          targetEpisode.manuscript = [targetEpisode.manuscript, extracted].filter(Boolean).join('\n\n');
         }
 
         if (boardPatch) Object.assign(this.proj.settings, mergeBoardSettings(this.proj.settings, boardPatch));
 
-        this.ep.updatedAt = new Date().toISOString();
+        targetEpisode.updatedAt = new Date().toISOString();
         this.proj.updatedAt = new Date().toISOString();
         this.instruction = this.phase.starters[2] || this.phase.placeholder;
       } catch (err) {

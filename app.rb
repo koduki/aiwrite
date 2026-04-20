@@ -8,6 +8,9 @@ require "uri"
 require_relative "lib/openrouter"
 require_relative "lib/board_update"
 require_relative "lib/llm_client"
+require_relative "lib/validation"
+require_relative "lib/url_guard"
+require_relative "lib/intent_check"
 
 module Aiwrite
   class App < Sinatra::Base
@@ -23,8 +26,9 @@ module Aiwrite
     post "/api/openrouter" do
       payload = parse_json_body
       return json_error("JSONを読み取れませんでした。", 400) unless payload
-      return json_error("OpenRouter APIキーを入力してください。", 400) if payload["apiKey"].to_s.empty?
-      return json_error("AI作家への依頼を入力してください。", 400) if payload["userInstruction"].to_s.strip.empty?
+      
+      val = Validation.validate_openrouter_payload(payload)
+      return json_error(val[:error], 400) unless val[:ok]
 
       llm_data = OpenRouter.prepare_payload(payload)
       result = LlmClient.chat(
@@ -45,7 +49,9 @@ module Aiwrite
     post "/api/board-update" do
       payload = parse_json_body
       return json_error("JSONを読み取れませんでした。", 400) unless payload
-      return json_error("OpenRouter APIキーを入力してください。", 400) if payload["apiKey"].to_s.empty?
+      
+      val = Validation.validate_board_update_payload(payload)
+      return json_error(val[:error], 400) unless val[:ok]
 
       llm_data = BoardUpdate.prepare_payload(payload)
       result = LlmClient.chat(
@@ -68,14 +74,42 @@ module Aiwrite
       end
     end
     
+    # ─── 意図判定 ───
+    post "/api/intent-check" do
+      payload = parse_json_body
+      return json_error("JSONを読み取れませんでした。", 400) unless payload
+      return json_response(isNextEpisode: false) if payload["userInstruction"].to_s.strip.empty?
+
+      llm_data = IntentCheck.prepare_payload(payload["userInstruction"])
+      result = LlmClient.chat(
+        api_key: payload["apiKey"],
+        model: payload["model"] || "openai/gpt-4o-mini",
+        system_prompt: llm_data[:system_prompt],
+        user_message: llm_data[:user_message],
+        temperature: 0.1,
+        params: { response_format: { type: "json_object" } }
+      )
+
+      unless result[:ok]
+        # 判定失敗は致命的ではないのでデフォルト値を返す
+        return json_response(isNextEpisode: false)
+      end
+
+      data = IntentCheck.parse_response(result[:content])
+      json_response(isNextEpisode: !!data["isNextEpisode"])
+    end
+
     # ─── 設定インポート ───
     post "/api/import-settings" do
       payload = parse_json_body
       return json_error("JSONを読み取れませんでした。", 400) unless payload
 
+      max_text = 10_000
+      max_bytes = 1_000_000
+
       text = payload["text"].to_s.strip
       unless text.empty?
-        return json_response(importedText: text[0, 6000])
+        return json_response(importedText: text[0, max_text])
       end
 
       url = payload["url"].to_s.strip
@@ -91,23 +125,36 @@ module Aiwrite
         return json_error("httpまたはhttpsのURLのみ読み込めます。", 400)
       end
 
+      if UrlGuard.blocked_host?(parsed_uri.host)
+        return json_error("許可されていないホスト名です。", 403)
+      end
+
       begin
-        response = Net::HTTP.get_response(parsed_uri)
-      rescue StandardError
-        return json_error("URLを読み込めませんでした。", 502)
+        http = Net::HTTP.new(parsed_uri.host, parsed_uri.port)
+        http.use_ssl = (parsed_uri.scheme == "https")
+        http.open_timeout = 5
+        http.read_timeout = 10
+
+        response = http.request_get(parsed_uri.request_uri, { "User-Agent" => "aiwrite-settings-importer/0.1" })
+      rescue StandardError => e
+        return json_error("URLを読み込めませんでした。", 502, e.message)
       end
 
       unless response.is_a?(Net::HTTPSuccess)
         return json_error("URLを読み込めませんでした: #{response.code}", 502)
       end
 
+      if response.body.bytesize > max_bytes
+        return json_error("レスポンスが大きすぎます。", 502)
+      end
+
       body = response.body.force_encoding("UTF-8")
       content_type_header = response["content-type"] || ""
 
       imported = if content_type_header.include?("text/html")
-                   extract_readable_text(body)
+                   extract_readable_text(body).to_s[0, max_text]
                  else
-                   body[0, 6000]
+                   body[0, max_text]
                  end
 
       json_response(importedText: imported)
