@@ -2,7 +2,8 @@
   "name": "aiwrite",
   "image": "mcr.microsoft.com/devcontainers/ruby:4.0",
   "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {}
   },
   "postCreateCommand": "bundle install && npm install -g @google/gemini-cli",
   "forwardPorts": [8080],
