@@ -2,31 +2,25 @@
 
 ## 前提
 
-本アプリはCloud RunへNext.js standalone出力をDockerコンテナとしてデプロイする想定。
+本アプリはCloud RunへRubyベースのDockerコンテナとしてデプロイする想定。
 
 ## Docker
 
-`Dockerfile` は以下の3段構成。
-
-1. `deps`: npm依存関係のインストール
-2. `builder`: `next build`
-3. `runner`: `.next/standalone` を起動
+`Dockerfile` は `ruby:4.0-alpine` をベースとし、Pumaサーバーを起動する。
 
 Cloud Runでは `PORT=8080` を使う。
 
 ## ローカル起動
 
 ```bash
-npm install
-npm run dev
+bundle install
+bundle exec puma
 ```
 
 ## 本番ビルド確認
 
-```bash
-npm run typecheck
-npm run build
-```
+Sinatraアプリのためコンパイルステップは不要。
+依存関係が正しく解決され、Pumaが起動することを確認する。
 
 ## Cloud Runデプロイ例
 

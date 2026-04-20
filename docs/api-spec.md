@@ -6,26 +6,27 @@ OpenRouterのChat Completions APIへ中継し、フェーズに応じたAI応答
 
 ### Request
 
-```ts
-type OpenRouterRequest = {
-  apiKey: string;
-  model: string;
-  phase: "structuring" | "sampling" | "refining" | "drafting";
-  persona: Persona;
-  settings: NovelSettings;
-  messages: ChatMessage[];
-  currentManuscript: string;
-  userInstruction: string;
-  mode: "chat" | "scene" | "retake";
-};
+```json
+// OpenRouterRequest JSON Structure
+{
+  "apiKey": "string",
+  "model": "string",
+  "phase": "structuring | sampling | refining | drafting",
+  "persona": { /* Persona object */ },
+  "settings": { /* NovelSettings object */ },
+  "messages": [ /* ChatMessage array */ ],
+  "currentManuscript": "string",
+  "userInstruction": "string",
+  "mode": "chat | scene | retake"
+}
 ```
 
 ### Response
 
-```ts
-type Response = {
-  content: string;
-};
+```json
+{
+  "content": "string"
+}
 ```
 
 ### フェーズとmode
@@ -43,32 +44,32 @@ drafting    -> scene
 
 ### Request
 
-```ts
-type BoardUpdateRequest = {
-  apiKey: string;
-  model: string;
-  phase: NarrativePhase;
-  persona: Persona;
-  settings: NovelSettings;
-  userInstruction: string;
-  assistantResponse: string;
-};
+```json
+{
+  "apiKey": "string",
+  "model": "string",
+  "phase": "NarrativePhase",
+  "persona": { /* Persona object */ },
+  "settings": { /* NovelSettings object */ },
+  "userInstruction": "string",
+  "assistantResponse": "string"
+}
 ```
 
 ### Response
 
-```ts
-type Response = {
-  settings: {
-    title?: string;
-    concept?: string;
-    characters?: string;
-    worldView?: string;
-    plot?: string;
-    referenceLinks?: string;
-    writingRules?: string;
-  };
-};
+```json
+{
+  "settings": {
+    "title": "string (optional)",
+    "concept": "string (optional)",
+    "characters": "string (optional)",
+    "worldView": "string (optional)",
+    "plot": "string (optional)",
+    "referenceLinks": "string (optional)",
+    "writingRules": "string (optional)"
+  }
+}
 ```
 
 ### 方針
