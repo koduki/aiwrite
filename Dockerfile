@@ -1,26 +1,13 @@
-FROM node:24-alpine AS deps
+FROM ruby:4.0-alpine AS base
+RUN apk add --no-cache build-base
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm install
 
-FROM node:24-alpine AS builder
-WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4 --without development test
+
 COPY . .
-RUN npm run build
 
-FROM node:24-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=8080
-
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-RUN mkdir -p ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
+ENV RACK_ENV=production
 EXPOSE 8080
-CMD ["node", "server.js"]
+CMD ["bundle", "exec", "puma", "-p", "8080", "-e", "production"]

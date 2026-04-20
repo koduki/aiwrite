@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f7f4ef">
+  <meta name="description" content="AI作家と対話しながら小説を書くBYOK型の創作アプリ">
+  <title>aiwrite</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+</head>
+<body>
+
+<main x-cloak x-data="aiwriteApp()" class="chat-app">
+
+  <!-- ─── Header ─── -->
+  <header class="chat-header">
+    <a class="brand" href="/">
+      <span>aiwrite</span>
+      <strong x-text="(proj.settings.title || '無題の小説') + ' / ' + ep.title"></strong>
+    </a>
+    <nav class="header-actions" aria-label="作品操作">
+      <button type="button" @click="activeSheet = activeSheet === 'board' ? 'none' : 'board'">ボード</button>
+      <button type="button" @click="activeSheet = activeSheet === 'manuscript' ? 'none' : 'manuscript'">本文</button>
+      <button type="button" @click="activeSheet = activeSheet === 'settings' ? 'none' : 'settings'">設定</button>
+    </nav>
+  </header>
+
+  <!-- ─── Work Switcher ─── -->
+  <section class="work-switcher" aria-label="作品と話数">
+    <select :value="workspace.activeProjectId" @change="switchProject($event.target.value)">
+      <template x-for="p in workspace.projects" :key="p.id">
+        <option :value="p.id" x-text="p.settings.title || '無題の小説'" :selected="p.id === workspace.activeProjectId"></option>
+      </template>
+    </select>
+    <select :value="proj.activeEpisodeId" @change="switchEpisode($event.target.value)">
+      <template x-for="e in proj.episodes" :key="e.id">
+        <option :value="e.id" x-text="e.title" :selected="e.id === proj.activeEpisodeId"></option>
+      </template>
+    </select>
+    <button type="button" @click="createProject()">新規作品</button>
+    <button type="button" @click="deleteProject()">作品削除</button>
+    <button type="button" @click="createEpisode()">新規話</button>
+    <button type="button" @click="deleteEpisode()">話削除</button>
+  </section>
+
+  <!-- ─── Phase Strip ─── -->
+  <section class="phase-strip" aria-label="執筆フェーズ">
+    <template x-for="(ph, i) in phases" :key="ph.id">
+      <button type="button" @click="switchPhase(ph.id)" :class="{ 'is-active': ph.id === proj.activePhase }">
+        <span class="phase-num" x-text="i + 1"></span>
+        <span x-text="ph.label"></span>
+      </button>
+    </template>
+  </section>
+
+  <!-- ─── Chat Thread ─── -->
+  <section class="chat-thread" aria-label="AIとのライターズルーム">
+
+    <!-- Welcome -->
+    <div x-show="ep.chatLog.length === 0" class="welcome-message">
+      <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=900&q=80" alt="">
+      <p class="eyebrow" x-text="'フェーズ' + (phaseIndex + 1) + ': ' + phase.label"></p>
+      <h1 x-text="phase.role + 'と始める'"></h1>
+      <p x-text="phase.intent + '。ボードにキャラクター、世界観、プロットを貯めながら、会話で試して固めます。'"></p>
+    </div>
+
+    <!-- Messages -->
+    <template x-for="msg in ep.chatLog" :key="msg.id">
+      <article :class="'message-row ' + msg.role">
+        <div class="avatar" x-text="msg.role === 'user' ? '私' : 'AI'"></div>
+        <div class="message-body">
+          <div class="speaker-row">
+            <p class="speaker" x-text="msg.role === 'user' ? '私' : proj.persona.name"></p>
+            <span x-show="phaseLabel(msg.phase)" class="phase-tag" x-text="phaseLabel(msg.phase)"></span>
+          </div>
+          <div :class="{ 'story-message': msg.role === 'assistant' && msg.phase === 'drafting' }" x-html="fmt(msg.content)"></div>
+        </div>
+      </article>
+    </template>
+
+    <!-- Loading -->
+    <article x-show="isLoading" class="message-row assistant">
+      <div class="avatar">AI</div>
+      <div class="message-body">
+        <div class="speaker-row">
+          <p class="speaker" x-text="proj.persona.name"></p>
+          <span class="phase-tag" x-text="phase.label"></span>
+        </div>
+        <p class="typing" x-text="phase.role + 'として考えています'"></p>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- ─── Composer ─── -->
+  <form class="composer" @submit.prevent="submitToAi()">
+    <div class="starter-grid" aria-label="入力例">
+      <template x-for="s in phase.starters" :key="s">
+        <button type="button" @click="instruction = s" x-text="s"></button>
+      </template>
+    </div>
+
+    <div class="composer-box">
+      <textarea x-model="instruction" rows="1" :placeholder="phase.placeholder"></textarea>
+      <button class="send-button" :disabled="isLoading" type="submit" aria-label="送信" x-text="isLoading ? '...' : '送信'"></button>
+    </div>
+
+    <div class="composer-meta">
+      <span x-text="phase.role"></span>
+      <button type="button" @click="nextPhase()" x-text="'次へ: ' + nextPhaseLabel"></button>
+      <span x-text="wordCount + '字'"></span>
+      <button type="button" @click="activeSheet = activeSheet === 'manuscript' ? 'none' : 'manuscript'">本文</button>
+    </div>
+
+    <p x-show="notice" class="notice" x-text="notice"></p>
+  </form>
+
+  <!-- ─── Side Panel ─── -->
+  <aside x-show="activeSheet !== 'none'" class="side-panel">
+    <div class="panel-header">
+      <strong x-text="activeSheet === 'board' ? '創作ボード' : activeSheet === 'settings' ? '作品設定' : '本文プレビュー'"></strong>
+      <button type="button" @click="activeSheet = 'none'">閉じる</button>
+    </div>
+
+    <!-- Board -->
+    <div x-show="activeSheet === 'board'" class="board-grid">
+      <p class="board-hint">会話の内容からAIが自動で更新します。違うと感じた部分はここで直接直せます。</p>
+      <label>
+        作品タイトル
+        <input :value="proj.settings.title" @input="proj.settings.title = $event.target.value">
+      </label>
+      <label>
+        話タイトル
+        <input :value="ep.title" @input="ep.title = $event.target.value; ep.updatedAt = new Date().toISOString()">
+      </label>
+      <label>
+        コンセプト
+        <textarea :value="proj.settings.concept" @input="proj.settings.concept = $event.target.value" placeholder="何が面白い作品か。読者に約束する体験。"></textarea>
+      </label>
+      <label>
+        キャラクター
+        <textarea :value="proj.settings.characters" @input="proj.settings.characters = $event.target.value" placeholder="人物名、欲望、弱点、口調、関係性など"></textarea>
+      </label>
+      <label>
+        世界観・ルール
+        <textarea :value="proj.settings.worldView" @input="proj.settings.worldView = $event.target.value" placeholder="世界のルール、歴史、制度、神話、制約など"></textarea>
+      </label>
+      <label>
+        プロット
+        <textarea :value="proj.settings.plot" @input="proj.settings.plot = $event.target.value" placeholder="章立て、事件年表、対立構造、次に書く場面など"></textarea>
+      </label>
+      <label>
+        参照リンク・素材メモ
+        <textarea :value="proj.settings.referenceLinks" @input="proj.settings.referenceLinks = $event.target.value" placeholder="URL、資料名、使いたい断片など"></textarea>
+      </label>
+      <label>
+        文体・本稿ルール
+        <textarea :value="proj.settings.writingRules" @input="proj.settings.writingRules = $event.target.value" placeholder="地の文、会話、視点、NG表現、採用した読み味など"></textarea>
+      </label>
+      <label>
+        設定インポート
+        <textarea x-model="importSource" placeholder="設定テキスト、または https:// から始まるURL"></textarea>
+      </label>
+      <button type="button" class="secondary-action" @click="importSettings()" :disabled="isLoading">素材メモへ読み込む</button>
+    </div>
+
+    <!-- Manuscript -->
+    <article x-show="activeSheet === 'manuscript'" class="manuscript">
+      <template x-if="ep.manuscript">
+        <div x-html="fmt(ep.manuscript)"></div>
+      </template>
+      <template x-if="!ep.manuscript">
+        <div class="empty-manuscript">
+          <p>本文はまだありません。</p>
+          <p x-text="ep.title + ' の本稿本文だけがここにまとまります。'"></p>
+        </div>
+      </template>
+    </article>
+
+    <!-- Settings -->
+    <div x-show="activeSheet === 'settings'" class="settings-grid">
+      <label>
+        OpenRouter APIキー
+        <input x-model="apiKey" type="password" placeholder="sk-or-v1-..." autocomplete="off">
+      </label>
+      <label>
+        モデル
+        <input :value="proj.model" @input="proj.model = $event.target.value; proj.updatedAt = new Date().toISOString()" placeholder="anthropic/claude-3.5-sonnet">
+      </label>
+      <label>
+        AI作家名
+        <input :value="proj.persona.name" @input="proj.persona.name = $event.target.value; proj.updatedAt = new Date().toISOString()">
+      </label>
+      <label>
+        AIのキャラクター性・トーク
+        <textarea :value="proj.persona.character" @input="proj.persona.character = $event.target.value; proj.updatedAt = new Date().toISOString()" placeholder="知的で冷静、熱血、皮肉屋など"></textarea>
+      </label>
+      <label>
+        こちらの呼び方
+        <input :value="proj.persona.userCall" @input="proj.persona.userCall = $event.target.value; proj.updatedAt = new Date().toISOString()" placeholder="プロデューサー、監督、あなたなど">
+      </label>
+      <label>
+        執筆する文体・ペルソナ
+        <textarea :value="proj.persona.style" @input="proj.persona.style = $event.target.value; proj.updatedAt = new Date().toISOString()"></textarea>
+      </label>
+      <label>
+        視点
+        <input :value="proj.persona.pointOfView" @input="proj.persona.pointOfView = $event.target.value; proj.updatedAt = new Date().toISOString()">
+      </label>
+      <label>
+        得意ジャンル
+        <input :value="proj.persona.genres" @input="proj.persona.genres = $event.target.value; proj.updatedAt = new Date().toISOString()">
+      </label>
+    </div>
+
+  </aside>
+
+</main>
+
+</body>
+</html>
