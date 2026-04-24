@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>aiwrite ruby</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <main x-data="aiwriteApp()" class="container">
+      <h1>アイライト (Sinatra + Alpine.js + RubyLLM)</h1>
+
+      <section class="panel">
+        <label>OpenRouter API Key <input x-model="apiKey" type="password" placeholder="sk-or-v1-..." /></label>
+        <label>Model <input x-model="model" placeholder="openai/gpt-4o-mini" /></label>
+        <label>Phase
+          <select x-model="phase">
+            <option value="structuring">structuring</option>
+            <option value="sampling">sampling</option>
+            <option value="refining">refining</option>
+            <option value="drafting">drafting</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>作品ボード</h2>
+        <label>Title <input x-model="settings.title" /></label>
+        <label>Concept <textarea x-model="settings.concept"></textarea></label>
+        <label>Characters <textarea x-model="settings.characters"></textarea></label>
+        <label>World <textarea x-model="settings.worldView"></textarea></label>
+        <label>Plot <textarea x-model="settings.plot"></textarea></label>
+        <label>Reference <textarea x-model="settings.referenceLinks"></textarea></label>
+        <label>Rules <textarea x-model="settings.writingRules"></textarea></label>
+      </section>
+
+      <section class="panel">
+        <h2>AI作家</h2>
+        <label>Name <input x-model="persona.name" /></label>
+        <label>Character <textarea x-model="persona.character"></textarea></label>
+        <label>User call <input x-model="persona.userCall" /></label>
+        <label>Style <textarea x-model="persona.style"></textarea></label>
+        <label>POV <input x-model="persona.pointOfView" /></label>
+        <label>Genres <input x-model="persona.genres" /></label>
+      </section>
+
+      <section class="panel">
+        <h2>会話</h2>
+        <label>Instruction <textarea x-model="instruction"></textarea></label>
+        <div class="buttons">
+          <button @click="generate('chat')">相談</button>
+          <button @click="generate('scene')">本文生成</button>
+          <button @click="generate('retake')">リテイク</button>
+          <button @click="detectIntent">次話判定</button>
+          <button @click="updateBoard">ボード更新</button>
+        </div>
+        <pre x-text="lastResponse"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>設定取り込み</h2>
+        <label>URL <input x-model="importUrl" placeholder="https://example.com" /></label>
+        <label>Text <textarea x-model="importText"></textarea></label>
+        <button @click="importSettings">取り込み</button>
+      </section>
+
+      <p class="notice" x-text="notice"></p>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
